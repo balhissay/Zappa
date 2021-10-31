@@ -467,7 +467,8 @@ class Zappa:
             current_site_packages_dir = os.path.join(
                 current_venv, "Lib", "site-packages"
             )
-            venv_site_packages_dir = os.path.join(ve_path, "Lib", "site-packages")
+            venv_site_packages_dir = os.path.join(
+                ve_path, "Lib", "site-packages")
         else:
             current_site_packages_dir = os.path.join(
                 current_venv, "lib", get_venv_from_python_version(), "site-packages"
@@ -491,7 +492,11 @@ class Zappa:
 
         # Use pip to download zappa's dependencies. Copying from current venv causes issues with things like PyYAML that installs as yaml
         zappa_deps = self.get_deps_list("zappa")
-        pkg_list = ["{0!s}=={1!s}".format(dep, version) for dep, version in zappa_deps]
+        # carlosfe: See https://github.com/zappa/Zappa/issues/984
+        #pkg_list = ["{0!s}=={1!s}".format(dep, version) for dep, version in zappa_deps]
+        pkg_list = ["{0!s}=={1!s}".format(
+            dep, version) for dep, version in zappa_deps if not dep.startswith('zappa')]
+        pkg_list.append(os.environ.get('SLIM_HANDLER_ZAPPA_PACKAGE'))
 
         # Need to manually add setuptools
         pkg_list.append("setuptools")
@@ -526,7 +531,8 @@ class Zappa:
             venv = os.environ["VIRTUAL_ENV"]
         elif os.path.exists(".python-version"):  # pragma: no cover
             try:
-                subprocess.check_output(["pyenv", "help"], stderr=subprocess.STDOUT)
+                subprocess.check_output(
+                    ["pyenv", "help"], stderr=subprocess.STDOUT)
             except OSError:
                 print(
                     "This directory seems to have pyenv's local venv, "
@@ -639,7 +645,8 @@ class Zappa:
                     ignore=shutil.ignore_patterns(*excludes),
                 )
             else:
-                copytree(cwd, temp_project_path, metadata=False, symlinks=False)
+                copytree(cwd, temp_project_path,
+                         metadata=False, symlinks=False)
             for glob_path in exclude_glob:
                 for path in glob.glob(os.path.join(temp_project_path, glob_path)):
                     try:
@@ -651,7 +658,8 @@ class Zappa:
         # because that's where AWS Lambda looks for it. It can't be inside a package.
         if handler_file:
             filename = handler_file.split(os.sep)[-1]
-            shutil.copy(handler_file, os.path.join(temp_project_path, filename))
+            shutil.copy(handler_file, os.path.join(
+                temp_project_path, filename))
 
         # Create and populate package ID file and write to temp project path
         package_info = {}
@@ -723,14 +731,16 @@ class Zappa:
                 ignore=shutil.ignore_patterns(*excludes),
             )
         else:
-            copytree(site_packages, temp_package_path, metadata=False, symlinks=False)
+            copytree(site_packages, temp_package_path,
+                     metadata=False, symlinks=False)
 
         # We may have 64-bin specific packages too.
         site_packages_64 = os.path.join(
             venv, "lib64", get_venv_from_python_version(), "site-packages"
         )
         if os.path.exists(site_packages_64):
-            egg_links.extend(glob.glob(os.path.join(site_packages_64, "*.egg-link")))
+            egg_links.extend(
+                glob.glob(os.path.join(site_packages_64, "*.egg-link")))
             if minify:
                 excludes = ZIP_EXCLUDES + exclude
                 copytree(
@@ -771,7 +781,8 @@ class Zappa:
                         # Otherwise try to use manylinux packages from PyPi..
                         # Related: https://github.com/Miserlou/Zappa/issues/398
                         shutil.rmtree(
-                            os.path.join(temp_project_path, installed_package_name),
+                            os.path.join(temp_project_path,
+                                         installed_package_name),
                             ignore_errors=True,
                         )
                         with zipfile.ZipFile(cached_wheel_path) as zfile:
@@ -839,17 +850,20 @@ class Zappa:
                     # Related: https://github.com/Miserlou/Zappa/pull/716
                     zipi = zipfile.ZipInfo(
                         os.path.join(
-                            root.replace(temp_project_path, "").lstrip(os.sep), filename
+                            root.replace(temp_project_path, "").lstrip(
+                                os.sep), filename
                         )
                     )
                     zipi.create_system = 3
-                    zipi.external_attr = 0o755 << int(16)  # Is this P2/P3 functional?
+                    zipi.external_attr = 0o755 << int(
+                        16)  # Is this P2/P3 functional?
                     with open(os.path.join(root, filename), "rb") as f:
                         archivef.writestr(zipi, f.read(), compression_method)
                 elif archive_format == "tarball":
                     tarinfo = tarfile.TarInfo(
                         os.path.join(
-                            root.replace(temp_project_path, "").lstrip(os.sep), filename
+                            root.replace(temp_project_path, "").lstrip(
+                                os.sep), filename
                         )
                     )
                     tarinfo.mode = 0o755
@@ -953,7 +967,8 @@ class Zappa:
         """
         Gets the locally stored version of a manylinux wheel. If one does not exist, the function downloads it.
         """
-        cached_wheels_dir = os.path.join(tempfile.gettempdir(), "cached_wheels")
+        cached_wheels_dir = os.path.join(
+            tempfile.gettempdir(), "cached_wheels")
 
         if not os.path.isdir(cached_wheels_dir):
             os.makedirs(cached_wheels_dir)
@@ -1000,7 +1015,8 @@ class Zappa:
         also caches the JSON file so that we don't have to poll Pypi
         every time.
         """
-        cached_pypi_info_dir = os.path.join(tempfile.gettempdir(), "cached_pypi_info")
+        cached_pypi_info_dir = os.path.join(
+            tempfile.gettempdir(), "cached_pypi_info")
         if not os.path.isdir(cached_pypi_info_dir):
             os.makedirs(cached_pypi_info_dir)
         # Even though the metadata is for the package, we save it in a
@@ -1059,7 +1075,8 @@ class Zappa:
             else:
                 self.s3_client.create_bucket(
                     Bucket=bucket_name,
-                    CreateBucketConfiguration={"LocationConstraint": self.aws_region},
+                    CreateBucketConfiguration={
+                        "LocationConstraint": self.aws_region},
                 )
 
             if self.tags:
@@ -1069,7 +1086,8 @@ class Zappa:
                         for key in self.tags.keys()
                     ]
                 }
-                self.s3_client.put_bucket_tagging(Bucket=bucket_name, Tagging=tags)
+                self.s3_client.put_bucket_tagging(
+                    Bucket=bucket_name, Tagging=tags)
 
         if not os.path.isfile(source_path) or os.stat(source_path).st_size == 0:
             print("Problem with source file {}".format(source_path))
@@ -1078,7 +1096,8 @@ class Zappa:
         dest_path = os.path.split(source_path)[1]
         try:
             source_size = os.stat(source_path).st_size
-            print("Uploading {0} ({1})..".format(dest_path, human_size(source_size)))
+            print("Uploading {0} ({1})..".format(
+                dest_path, human_size(source_size)))
             progress = tqdm(
                 total=float(os.path.getsize(source_path)),
                 unit_scale=True,
@@ -1204,7 +1223,8 @@ class Zappa:
             DeadLetterConfig=dead_letter_config,
             Environment={"Variables": aws_environment_variables},
             KMSKeyArn=aws_kms_key_arn,
-            TracingConfig={"Mode": "Active" if self.xray_tracing else "PassThrough"},
+            TracingConfig={
+                "Mode": "Active" if self.xray_tracing else "PassThrough"},
             Layers=layers,
         )
         if not docker_image_uri:
@@ -1241,7 +1261,8 @@ class Zappa:
             )
 
         if self.tags:
-            self.lambda_client.tag_resource(Resource=resource_arn, Tags=self.tags)
+            self.lambda_client.tag_resource(
+                Resource=resource_arn, Tags=self.tags)
 
         if concurrency is not None:
             self.lambda_client.put_function_concurrency(
@@ -1314,7 +1335,8 @@ class Zappa:
                 ReservedConcurrentExecutions=concurrency,
             )
         else:
-            self.lambda_client.delete_function_concurrency(FunctionName=function_name)
+            self.lambda_client.delete_function_concurrency(
+                FunctionName=function_name)
 
         if num_revisions:
             # Find the existing revision IDs for the given function
@@ -1418,7 +1440,8 @@ class Zappa:
         resource_arn = response["FunctionArn"]
 
         if self.tags:
-            self.lambda_client.tag_resource(Resource=resource_arn, Tags=self.tags)
+            self.lambda_client.tag_resource(
+                Resource=resource_arn, Tags=self.tags)
 
         return resource_arn
 
@@ -1501,7 +1524,8 @@ class Zappa:
         """
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lambda.html#waiters
         waiter = self.lambda_client.get_waiter("function_active")
-        print(f"Waiting for lambda function [{function_name}] to become active...")
+        print(
+            f"Waiting for lambda function [{function_name}] to become active...")
         waiter.wait(FunctionName=function_name)
 
     def wait_until_lambda_function_is_updated(self, function_name):
@@ -1510,7 +1534,8 @@ class Zappa:
         """
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lambda.html#waiters
         waiter = self.lambda_client.get_waiter("function_updated")
-        print(f"Waiting for lambda function [{function_name}] to be updated...")
+        print(
+            f"Waiting for lambda function [{function_name}] to be updated...")
         waiter.wait(FunctionName=function_name)
 
     def get_lambda_function(self, function_name):
@@ -1607,12 +1632,14 @@ class Zappa:
                 load_balancer_arn
             )
         )
-        waiter.wait(LoadBalancerArns=[load_balancer_arn], WaiterConfig={"Delay": 3})
+        waiter.wait(LoadBalancerArns=[
+                    load_balancer_arn], WaiterConfig={"Delay": 3})
 
         # Match the lambda timeout on the load balancer.
         self.elbv2_client.modify_load_balancer_attributes(
             LoadBalancerArn=load_balancer_arn,
-            Attributes=[{"Key": "idle_timeout.timeout_seconds", "Value": str(timeout)}],
+            Attributes=[
+                {"Key": "idle_timeout.timeout_seconds", "Value": str(timeout)}],
         )
 
         # Create/associate target group.
@@ -1663,7 +1690,8 @@ class Zappa:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.create_listener
         kwargs = dict(
             # TODO: Listeners support custom ssl certificates (Certificates). For now we leave this default.
-            Certificates=[{"CertificateArn": alb_vpc_config["CertificateArn"]}],
+            Certificates=[
+                {"CertificateArn": alb_vpc_config["CertificateArn"]}],
             DefaultActions=[
                 {
                     "Type": "forward",
@@ -1701,7 +1729,8 @@ class Zappa:
         # Locate and delete load balancer
         try:
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.describe_load_balancers
-            response = self.elbv2_client.describe_load_balancers(Names=[lambda_name])
+            response = self.elbv2_client.describe_load_balancers(Names=[
+                                                                 lambda_name])
             if not (response["LoadBalancers"]) or len(response["LoadBalancers"]) > 1:
                 raise EnvironmentError(
                     "Failure to locate/delete ALB named [{}]. Response was: {}".format(
@@ -1725,15 +1754,18 @@ class Zappa:
                 listener_arn = response["Listeners"][0]["ListenerArn"]
                 # Remove the listener. This explicit deletion of the listener seems necessary to avoid ResourceInUseExceptions when deleting target groups.
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_listener
-                response = self.elbv2_client.delete_listener(ListenerArn=listener_arn)
+                response = self.elbv2_client.delete_listener(
+                    ListenerArn=listener_arn)
             # Remove the load balancer and wait for completion
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_load_balancer
             response = self.elbv2_client.delete_load_balancer(
                 LoadBalancerArn=load_balancer_arn
             )
             waiter = self.elbv2_client.get_waiter("load_balancers_deleted")
-            print("Waiting for load balancer [{}] to be deleted..".format(lambda_name))
-            waiter.wait(LoadBalancerArns=[load_balancer_arn], WaiterConfig={"Delay": 3})
+            print("Waiting for load balancer [{}] to be deleted..".format(
+                lambda_name))
+            waiter.wait(LoadBalancerArns=[
+                        load_balancer_arn], WaiterConfig={"Delay": 3})
         except botocore.exceptions.ClientError as e:  # pragma: no cover
             print(e.response["Error"]["Code"])
             if "LoadBalancerNotFound" in e.response["Error"]["Code"]:
@@ -1745,11 +1777,13 @@ class Zappa:
         try:
             # Locate the lambda ARN
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lambda.html#Lambda.Client.get_function
-            response = self.lambda_client.get_function(FunctionName=lambda_name)
+            response = self.lambda_client.get_function(
+                FunctionName=lambda_name)
             lambda_arn = response["Configuration"]["FunctionArn"]
             # Locate the target group ARN
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.describe_target_groups
-            response = self.elbv2_client.describe_target_groups(Names=[lambda_name])
+            response = self.elbv2_client.describe_target_groups(Names=[
+                                                                lambda_name])
             if not (response["TargetGroups"]) or len(response["TargetGroups"]) > 1:
                 raise EnvironmentError(
                     "Failure to locate/delete ALB target group named [{}]. Response was: {}".format(
@@ -1762,7 +1796,8 @@ class Zappa:
                 TargetGroupArn=target_group_arn, Targets=[{"Id": lambda_arn}]
             )
             waiter = self.elbv2_client.get_waiter("target_deregistered")
-            print("Waiting for target [{}] to be deregistered...".format(lambda_name))
+            print("Waiting for target [{}] to be deregistered...".format(
+                lambda_name))
             waiter.wait(
                 TargetGroupArn=target_group_arn,
                 Targets=[{"Id": lambda_arn}],
@@ -1770,7 +1805,8 @@ class Zappa:
             )
             # Remove the target group
             # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2.html#ElasticLoadBalancingv2.Client.delete_target_group
-            self.elbv2_client.delete_target_group(TargetGroupArn=target_group_arn)
+            self.elbv2_client.delete_target_group(
+                TargetGroupArn=target_group_arn)
         except botocore.exceptions.ClientError as e:  # pragma: no cover
             print(e.response["Error"]["Code"])
             if "TargetGroupNotFound" in e.response["Error"]["Code"]:
@@ -1888,7 +1924,8 @@ class Zappa:
         Create Authorizer for API gateway
         """
         authorizer_type = authorizer.get("type", "TOKEN").upper()
-        identity_validation_expression = authorizer.get("validation_expression", None)
+        identity_validation_expression = authorizer.get(
+            "validation_expression", None)
 
         authorizer_resource = troposphere.apigateway.Authorizer("Authorizer")
         authorizer_resource.RestApiId = troposphere.Ref(restapi)
@@ -1896,7 +1933,8 @@ class Zappa:
         authorizer_resource.Type = authorizer_type
         authorizer_resource.AuthorizerUri = uri
         authorizer_resource.IdentitySource = (
-            "method.request.header.%s" % authorizer.get("token_header", "Authorization")
+            "method.request.header.%s" % authorizer.get(
+                "token_header", "Authorization")
         )
         if identity_validation_expression:
             authorizer_resource.IdentityValidationExpression = (
@@ -2013,7 +2051,8 @@ class Zappa:
         integration = troposphere.apigateway.Integration()
         integration.Type = "MOCK"
         integration.PassthroughBehavior = "NEVER"
-        integration.RequestTemplates = {"application/json": '{"statusCode": 200}'}
+        integration.RequestTemplates = {
+            "application/json": '{"statusCode": 200}'}
         integration_response = troposphere.apigateway.IntegrationResponse()
         integration_response.ResponseParameters = {
             "method.response.header.%s" % key: value
@@ -2066,9 +2105,12 @@ class Zappa:
             patchOperations=[
                 self.get_patch_op("logging/loglevel", cloudwatch_log_level),
                 self.get_patch_op("logging/dataTrace", cloudwatch_data_trace),
-                self.get_patch_op("metrics/enabled", cloudwatch_metrics_enabled),
-                self.get_patch_op("caching/ttlInSeconds", str(cache_cluster_ttl)),
-                self.get_patch_op("caching/dataEncrypted", cache_cluster_encrypted),
+                self.get_patch_op("metrics/enabled",
+                                  cloudwatch_metrics_enabled),
+                self.get_patch_op("caching/ttlInSeconds",
+                                  str(cache_cluster_ttl)),
+                self.get_patch_op("caching/dataEncrypted",
+                                  cache_cluster_encrypted),
             ],
         )
 
@@ -2087,7 +2129,8 @@ class Zappa:
         ):
             self.apigateway_client.update_rest_api(
                 restApiId=api_id,
-                patchOperations=[{"op": "add", "path": "/binaryMediaTypes/*~1*"}],
+                patchOperations=[
+                    {"op": "add", "path": "/binaryMediaTypes/*~1*"}],
             )
 
         if cors:
@@ -2122,7 +2165,8 @@ class Zappa:
         if "binaryMediaTypes" in response and "*/*" in response["binaryMediaTypes"]:
             self.apigateway_client.update_rest_api(
                 restApiId=api_id,
-                patchOperations=[{"op": "remove", "path": "/binaryMediaTypes/*~1*"}],
+                patchOperations=[
+                    {"op": "remove", "path": "/binaryMediaTypes/*~1*"}],
             )
         if cors:
             # go through each resource and change the contentHandling type
@@ -2207,7 +2251,8 @@ class Zappa:
             limit=1, nameQuery="{}_{}".format(stage_name, api_id)
         )
         for api_key in response.get("items"):
-            self.apigateway_client.delete_api_key(apiKey="{}".format(api_key["id"]))
+            self.apigateway_client.delete_api_key(
+                apiKey="{}".format(api_key["id"]))
 
     def add_api_stage_to_api_key(self, api_key, api_id, stage_name):
         """
@@ -2292,9 +2337,12 @@ class Zappa:
                 restApiId=api["id"],
                 stageName=stage_name,
                 patchOperations=[
-                    self.get_patch_op("logging/loglevel", cloudwatch_log_level),
-                    self.get_patch_op("logging/dataTrace", cloudwatch_data_trace),
-                    self.get_patch_op("metrics/enabled", cloudwatch_metrics_enabled),
+                    self.get_patch_op("logging/loglevel",
+                                      cloudwatch_log_level),
+                    self.get_patch_op("logging/dataTrace",
+                                      cloudwatch_data_trace),
+                    self.get_patch_op("metrics/enabled",
+                                      cloudwatch_metrics_enabled),
                 ],
             )
 
@@ -2302,7 +2350,8 @@ class Zappa:
         LambdaConfig = {}
         for config in lambda_configs:
             LambdaConfig[config] = lambda_arn
-        description = self.cognito_client.describe_user_pool(UserPoolId=user_pool)
+        description = self.cognito_client.describe_user_pool(
+            UserPoolId=user_pool)
         description_kwargs = {}
         for key, value in description["UserPool"].items():
             if key in (
@@ -2381,7 +2430,8 @@ class Zappa:
                 waiter.wait(StackName=name)
             return True
         else:
-            print("ZappaProject tag not found on {0}, doing nothing".format(name))
+            print(
+                "ZappaProject tag not found on {0}, doing nothing".format(name))
             return False
 
     def create_stack_template(
@@ -2448,18 +2498,21 @@ class Zappa:
         with open(template, "wb") as out:
             out.write(
                 bytes(
-                    self.cf_template.to_json(indent=None, separators=(",", ":")),
+                    self.cf_template.to_json(
+                        indent=None, separators=(",", ":")),
                     "utf-8",
                 )
             )
 
-        self.upload_to_s3(template, working_bucket, disable_progress=disable_progress)
+        self.upload_to_s3(template, working_bucket,
+                          disable_progress=disable_progress)
         if self.boto_session.region_name == "us-gov-west-1":
             url = "https://s3-us-gov-west-1.amazonaws.com/{0}/{1}".format(
                 working_bucket, template
             )
         else:
-            url = "https://s3.amazonaws.com/{0}/{1}".format(working_bucket, template)
+            url = "https://s3.amazonaws.com/{0}/{1}".format(
+                working_bucket, template)
 
         tags = [
             {"Key": key, "Value": self.tags[key]}
@@ -2483,7 +2536,8 @@ class Zappa:
                 StackName=name, Capabilities=capabilities, TemplateURL=url, Tags=tags
             )
             print(
-                "Waiting for stack {0} to create (this can take a bit)..".format(name)
+                "Waiting for stack {0} to create (this can take a bit)..".format(
+                    name)
             )
         else:
             try:
@@ -2504,7 +2558,8 @@ class Zappa:
             total_resources = len(self.cf_template.resources)
             current_resources = 0
             sr = self.cf_client.get_paginator("list_stack_resources")
-            progress = tqdm(total=total_resources, unit="res", disable=disable_progress)
+            progress = tqdm(total=total_resources, unit="res",
+                            disable=disable_progress)
             while True:
                 time.sleep(3)
                 result = self.cf_client.describe_stacks(StackName=name)
@@ -2740,7 +2795,8 @@ class Zappa:
             )
             certificate_arn = acm_certificate["CertificateArn"]
 
-        self.update_domain_base_path_mapping(domain_name, lambda_name, stage, base_path)
+        self.update_domain_base_path_mapping(
+            domain_name, lambda_name, stage, base_path)
 
         return self.apigateway_client.update_domain_name(
             domainName=domain_name,
@@ -2750,7 +2806,8 @@ class Zappa:
                     "path": "/certificateName",
                     "value": certificate_name,
                 },
-                {"op": "replace", "path": "/certificateArn", "value": certificate_arn},
+                {"op": "replace", "path": "/certificateArn",
+                    "value": certificate_arn},
             ],
         )
 
@@ -2917,7 +2974,8 @@ class Zappa:
         if role.assume_role_policy_document != assume_policy_obj and set(
             role.assume_role_policy_document["Statement"][0]["Principal"]["Service"]
         ) != set(assume_policy_obj["Statement"][0]["Principal"]["Service"]):
-            print("Updating assume role policy on " + self.role_name + " IAM Role.")
+            print("Updating assume role policy on " +
+                  self.role_name + " IAM Role.")
             self.iam_client.update_assume_role_policy(
                 RoleName=self.role_name, PolicyDocument=self.assume_policy
             )
@@ -2930,7 +2988,8 @@ class Zappa:
         Remove obsolete policy statements to prevent policy from bloating over the limit after repeated updates.
         """
         try:
-            policy_response = self.lambda_client.get_policy(FunctionName=lambda_name)
+            policy_response = self.lambda_client.get_policy(
+                FunctionName=lambda_name)
             if policy_response["ResponseMetadata"]["HTTPStatusCode"] == 200:
                 statement = json.loads(policy_response["Policy"])["Statement"]
                 for s in statement:
@@ -2945,7 +3004,8 @@ class Zappa:
                         )
             else:
                 logger.debug(
-                    "Failed to load Lambda function policy: {}".format(policy_response)
+                    "Failed to load Lambda function policy: {}".format(
+                        policy_response)
                 )
         except ClientError as e:
             if e.args[0].find("ResourceNotFoundException") > -1:
@@ -2963,7 +3023,8 @@ class Zappa:
         Related: http://docs.aws.amazon.com/lambda/latest/dg/with-s3-example-configure-event-source.html
         """
         logger.debug(
-            "Adding new permission to invoke Lambda function: {}".format(lambda_name)
+            "Adding new permission to invoke Lambda function: {}".format(
+                lambda_name)
         )
         permission_response = self.lambda_client.add_permission(
             FunctionName=lambda_name,
@@ -3052,7 +3113,8 @@ class Zappa:
 
                     if "RuleArn" in rule_response:
                         logger.debug(
-                            "Rule created. ARN {}".format(rule_response["RuleArn"])
+                            "Rule created. ARN {}".format(
+                                rule_response["RuleArn"])
                         )
 
                     # Specific permissions are necessary for any trigger to work.
@@ -3216,7 +3278,8 @@ class Zappa:
                 raise
             else:
                 logger.debug(
-                    "No target found for this rule: {} {}".format(rule_name, e.args[0])
+                    "No target found for this rule: {} {}".format(
+                        rule_name, e.args[0])
                 )
                 return
 
@@ -3234,7 +3297,8 @@ class Zappa:
         """
         Get all of the rule names associated with a lambda function.
         """
-        response = self.events_client.list_rule_names_by_target(TargetArn=lambda_arn)
+        response = self.events_client.list_rule_names_by_target(
+            TargetArn=lambda_arn)
         rule_names = response["RuleNames"]
         # Iterate when the results are paginated
         while "NextToken" in response:
@@ -3248,7 +3312,8 @@ class Zappa:
         """
         Get all of the rule details associated with this function.
         """
-        rule_names = self.get_event_rule_names_for_lambda(lambda_arn=lambda_arn)
+        rule_names = self.get_event_rule_names_for_lambda(
+            lambda_arn=lambda_arn)
         return [self.events_client.describe_rule(Name=r) for r in rule_names]
 
     def unschedule_events(
@@ -3262,7 +3327,8 @@ class Zappa:
         """
         self._clear_policy(lambda_name)
 
-        rule_names = self.get_event_rule_names_for_lambda(lambda_arn=lambda_arn)
+        rule_names = self.get_event_rule_names_for_lambda(
+            lambda_arn=lambda_arn)
         for rule_name in rule_names:
             self.delete_rule(rule_name)
             print("Unscheduled " + rule_name + ".")
@@ -3347,13 +3413,15 @@ class Zappa:
         Create the DynamoDB table for async task return values
         """
         try:
-            dynamodb_table = self.dynamodb_client.describe_table(TableName=table_name)
+            dynamodb_table = self.dynamodb_client.describe_table(
+                TableName=table_name)
             return False, dynamodb_table
 
         # catch this exception (triggered if the table doesn't exist)
         except botocore.exceptions.ClientError:
             dynamodb_table = self.dynamodb_client.create_table(
-                AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
+                AttributeDefinitions=[
+                    {"AttributeName": "id", "AttributeType": "S"}],
                 TableName=table_name,
                 KeySchema=[
                     {"AttributeName": "id", "KeyType": "HASH"},
@@ -3569,7 +3637,8 @@ class Zappa:
             elif os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get(
                 "AWS_SECRET_ACCESS_KEY"
             ):
-                region_name = os.environ.get("AWS_DEFAULT_REGION") or self.aws_region
+                region_name = os.environ.get(
+                    "AWS_DEFAULT_REGION") or self.aws_region
                 session_kw = {
                     "aws_access_key_id": os.environ.get("AWS_ACCESS_KEY_ID"),
                     "aws_secret_access_key": os.environ.get("AWS_SECRET_ACCESS_KEY"),
